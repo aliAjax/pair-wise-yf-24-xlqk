@@ -1,12 +1,12 @@
 import type { ReviewNote } from "../types/ReviewNote";
 
 export const createDefaultReviewNote = (overrides: Partial<ReviewNote> = {}): ReviewNote => ({
-  id: 1 as never,
-  diff_result_id: 1 as never,
-  tag: "tag 1" as never,
-  comment: "comment 1" as never,
-  reviewer: "reviewer 1" as never,
-  status: "CONFIRMED" as never,
+  id: 0,
+  diff_result_id: 0,
+  tag: "",
+  comment: "",
+  reviewer: "",
+  status: "OPEN",
   ...overrides
 });
 
