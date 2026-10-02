@@ -32,8 +32,11 @@ cp .env.example .env && docker compose up -d
 ## 项目目录结构
 
 ```text
-frontend/src/api, stores, types, constants, constructors, components/common, hooks, pages, router, utils, mocks
+frontend/src/api, stores, types, constants, constructors, components/common, hooks, pages, router, utils, services, config, mocks
 ```
+
+- `services/`：段落保存联动、差异重算（diffRecomputeService）、备注与冲突草稿业务规则。
+- `utils/localRepository.ts`：localStorage 原子提交、乐观版本判断、分批/分块、跨标签页事件。
 
 ## 环境变量说明
 
@@ -52,7 +55,16 @@ frontend/src/api, stores, types, constants, constructors, components/common, hoo
 
 - DiffType: constants/DiffType、types/DiffType、constructors、logTemplates、errorMessages、筛选器、展示组件/控制器均有引用。
 - PrivacyRiskLevel: constants/PrivacyRiskLevel、types/PrivacyRiskLevel、constructors、logTemplates、errorMessages、筛选器、展示组件/控制器均有引用。
-- ReviewStatus: constants/ReviewStatus、types/ReviewStatus、constructors、logTemplates、errorMessages、筛选器、展示组件/控制器均有引用。
+- ReviewStatus: constants/ReviewStatus、types/ReviewStatus、constructors（含 createRecheckReviewNote）、logTemplates、errorMessages、筛选器（ReviewPage 状态 chips）、展示组件（StatusBadge/ReviewChecklist）均有引用。
+  - `RECHECK`（待复核）：段落改动重算后由 `services/diffRecomputeService.ts` 自动写入；文案在 constants/ReviewStatus、utils/formatters 的 `formatReviewStatus`，样式在 styles.css 的 `status-recheck`。
+
+## 版本与并发约定
+
+- 数据版本号：PolicyDocument / PolicySection / DiffResult 均带 `revision`；ReviewNote 带 `original_comment`、`recheck_at`。
+- 段落保存联动：段落一改即按新内容重算该文档差异（DiffResult 按 `stable_key` 原位更新并递增 revision），受影响的旧审阅备注保留原文、状态标为 `RECHECK` 待人工复核。
+- 多标签页保存：编辑开始时锚定文档 `baseRevision`，保存时与磁盘最新版本比较；晚到保存收到 `VERSION_CONFLICT` 提示，改动自动存入“冲突草稿”（localStorage `policy-diff:conflictDrafts`），不覆盖先保存一方的数据；可在审阅页“采纳我的改动/放弃”。
+- 超长内容：单条记录超过 `CHUNK_CHAR_THRESHOLD` 自动分块写入（主键只存占位标记）；多记录导入按 `BATCH_SIZE` 分批提交，每批重新读盘并让步事件循环，配置见 `frontend/src/config/storage.ts`。
+- 旧数据兼容：缺少 schemaVersion/revision 的本地数据首次打开时由 `utils/storageMigration.ts` 补默认值（revision=1、备注原文兜底等），schemaVersion 升级到 2 后回写。
 
 ## 为什么会牵一发动全身
 

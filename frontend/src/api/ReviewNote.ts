@@ -1,21 +1,54 @@
+import { localRepository } from "../utils/localRepository";
 import { mockData } from "../mocks/seedData";
+import { ControllerError } from "../utils/errors";
+import { type CollectionName } from "../utils/storageKeys";
+import { createReviewNote, editReviewNote, updateReviewNoteStatus } from "../services/reviewNoteService";
 import type { ReviewNote } from "../types/ReviewNote";
 
-const endpoint = "/api/review-note";
+const collection: CollectionName = "reviewNote";
 
 export async function listReviewNote(): Promise<ReviewNote[]> {
-  if (typeof fetch !== "undefined" && endpoint.startsWith("/api") && false) {
-    try {
-      const res = await fetch(endpoint);
-      if (res.ok) return await res.json();
-    } catch {
-      // Local mock fallback keeps the UI available during offline review.
-    }
+  try {
+    localRepository.init(mockData as unknown as Record<CollectionName, unknown[]>);
+    return localRepository.list<ReviewNote>(collection);
+  } catch (error) {
+    throw new ControllerError("listReviewNote", error);
   }
-  return [...(mockData.reviewNote as unknown as ReviewNote[])];
 }
 
-export async function saveReviewNote(payload: ReviewNote) {
-  console.info("save ReviewNote", payload);
-  return payload;
+export async function saveReviewNote(payload: ReviewNote): Promise<ReviewNote> {
+  try {
+    return localRepository.save(collection, payload).record;
+  } catch (error) {
+    throw new ControllerError("saveReviewNote", error);
+  }
+}
+
+export async function createNote(params: {
+  diff_result_id: number;
+  tag: string;
+  comment: string;
+  reviewer: string;
+}): Promise<ReviewNote> {
+  try {
+    return createReviewNote(params);
+  } catch (error) {
+    throw new ControllerError("createNote", error);
+  }
+}
+
+export async function setNoteStatus(id: number, status: ReviewNote["status"]): Promise<ReviewNote> {
+  try {
+    return updateReviewNoteStatus(id, status);
+  } catch (error) {
+    throw new ControllerError("setNoteStatus", error);
+  }
+}
+
+export async function editNote(id: number, comment: string): Promise<ReviewNote> {
+  try {
+    return editReviewNote(id, comment);
+  } catch (error) {
+    throw new ControllerError("editNote", error);
+  }
 }
